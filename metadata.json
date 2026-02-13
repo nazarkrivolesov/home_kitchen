@@ -1,0 +1,7 @@
+{
+  "name": "Home Kitchen (Домашня Кухня)",
+  "description": "A premium Cyber-Cafe styled food delivery app for the Ukrainian market, featuring a full admin dashboard, real-time Firestore menu, and Firebase storage integration.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
