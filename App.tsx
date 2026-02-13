@@ -22,7 +22,9 @@ import {
   Clock,
   MapPin,
   Phone,
-  LayoutDashboard
+  LayoutDashboard,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -45,25 +47,52 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, auth, storage } from './firebase';
 import { Dish, CartItem, Category } from './types';
 
+type Theme = 'dark' | 'light';
+
 // --- Helpers ---
 const formatPrice = (price: number) => `${price} ₴`;
 
 // --- Components ---
 
-const Navbar = ({ cartCount, user }: { cartCount: number, user: FirebaseUser | null }) => {
+const Navbar = ({ 
+  cartCount, 
+  user, 
+  theme, 
+  toggleTheme 
+}: { 
+  cartCount: number, 
+  user: FirebaseUser | null, 
+  theme: Theme, 
+  toggleTheme: () => void 
+}) => {
+  const isDark = theme === 'dark';
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#121212]/80 backdrop-blur-md border-b border-white/10 px-6 py-4 flex justify-between items-center">
+    <nav className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b px-6 py-4 flex justify-between items-center transition-colors duration-300 ${
+      isDark ? 'bg-[#121212]/80 border-white/10' : 'bg-white/80 border-black/5 shadow-sm'
+    }`}>
       <Link to="/" className="text-2xl font-black tracking-tighter text-[#39FF14] flex items-center gap-2">
         <ShoppingBag className="w-8 h-8" />
         HOME KITCHEN
       </Link>
-      <div className="flex items-center gap-6">
-        <Link to="/admin" className="text-white/60 hover:text-[#FF007F] transition-colors flex items-center gap-2">
+      <div className="flex items-center gap-4 md:gap-6">
+        <button 
+          onClick={toggleTheme}
+          className={`p-2 rounded-full transition-colors ${
+            isDark ? 'text-white/60 hover:text-[#39FF14] hover:bg-white/5' : 'text-black/60 hover:text-[#39FF14] hover:bg-black/5'
+          }`}
+        >
+          {isDark ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
+        
+        <Link to="/admin" className={`transition-colors flex items-center gap-2 ${
+          isDark ? 'text-white/60 hover:text-[#FF007F]' : 'text-black/60 hover:text-[#FF007F]'
+        }`}>
           {user ? <LayoutDashboard size={20} /> : <User size={20} />}
-          <span className="hidden md:inline">{user ? 'Панель' : 'Увійти'}</span>
+          <span className="hidden md:inline font-bold text-xs uppercase tracking-wider">{user ? 'Панель' : 'Увійти'}</span>
         </Link>
+        
         <button className="relative group p-2">
-          <ShoppingCart className="text-white group-hover:text-[#39FF14] transition-colors" />
+          <ShoppingCart className={isDark ? 'text-white group-hover:text-[#39FF14]' : 'text-black group-hover:text-[#39FF14]'} />
           {cartCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-[#FF007F] text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">
               {cartCount}
@@ -75,10 +104,12 @@ const Navbar = ({ cartCount, user }: { cartCount: number, user: FirebaseUser | n
   );
 };
 
-const Hero = () => (
+const Hero = ({ theme }: { theme: Theme }) => (
   <section className="relative h-[80vh] flex items-center justify-center pt-20 overflow-hidden">
     <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-30 blur-sm"></div>
-    <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-transparent to-[#121212]/80"></div>
+    <div className={`absolute inset-0 bg-gradient-to-t via-transparent ${
+      theme === 'dark' ? 'from-[#121212] to-[#121212]/80' : 'from-[#F8FAFC] to-[#F8FAFC]/80'
+    }`}></div>
     
     <motion.div 
       initial={{ opacity: 0, y: 30 }}
@@ -89,7 +120,9 @@ const Hero = () => (
       <h1 className="text-6xl md:text-8xl font-black mb-6 tracking-tighter">
         <span className="text-[#39FF14]">КІБЕР</span> <br className="md:hidden" /> СМАК
       </h1>
-      <p className="text-xl md:text-2xl text-white/80 max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
+      <p className={`text-xl md:text-2xl max-w-2xl mx-auto mb-10 leading-relaxed font-medium ${
+        theme === 'dark' ? 'text-white/80' : 'text-slate-800'
+      }`}>
         Автентична українська кухня у сучасному виконанні. <br /> 
         Швидка доставка. Гарячі страви. Потужні емоції.
       </p>
@@ -105,11 +138,12 @@ const Hero = () => (
   </section>
 );
 
-const AdminLogin = () => {
+const AdminLogin = ({ theme }: { theme: Theme }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const isDark = theme === 'dark';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,31 +159,37 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-[#121212]">
+    <div className={`min-h-screen flex items-center justify-center p-6 transition-colors duration-300 ${isDark ? 'bg-[#121212]' : 'bg-slate-50'}`}>
       <motion.div 
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="w-full max-w-md bg-[#1a1a1a] p-8 border border-white/10 shadow-2xl"
+        className={`w-full max-w-md p-8 border shadow-2xl transition-colors duration-300 ${
+          isDark ? 'bg-[#1a1a1a] border-white/10' : 'bg-white border-black/5'
+        }`}
       >
         <h2 className="text-3xl font-black mb-8 text-[#FF007F] text-center tracking-tighter">ВХІД АДМІНІСТРАТОРА</h2>
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
-            <label className="block text-xs uppercase text-white/40 mb-2 font-bold">Email</label>
+            <label className={`block text-[10px] uppercase mb-2 font-bold ${isDark ? 'text-white/40' : 'text-black/40'}`}>Email</label>
             <input 
               type="email" 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-black border border-white/10 p-3 text-white focus:border-[#39FF14] outline-none transition-colors"
+              className={`w-full border p-3 outline-none transition-colors ${
+                isDark ? 'bg-black border-white/10 text-white focus:border-[#39FF14]' : 'bg-white border-black/10 text-black focus:border-[#39FF14]'
+              }`}
               required
             />
           </div>
           <div>
-            <label className="block text-xs uppercase text-white/40 mb-2 font-bold">Пароль</label>
+            <label className={`block text-[10px] uppercase mb-2 font-bold ${isDark ? 'text-white/40' : 'text-black/40'}`}>Пароль</label>
             <input 
               type="password" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-black border border-white/10 p-3 text-white focus:border-[#39FF14] outline-none transition-colors"
+              className={`w-full border p-3 outline-none transition-colors ${
+                isDark ? 'bg-black border-white/10 text-white focus:border-[#39FF14]' : 'bg-white border-black/10 text-black focus:border-[#39FF14]'
+              }`}
               required
             />
           </div>
@@ -157,7 +197,7 @@ const AdminLogin = () => {
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-[#39FF14] text-black font-black py-4 hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="w-full bg-[#39FF14] text-black font-black py-4 hover:opacity-90 transition-opacity disabled:opacity-50 cyber-glow-green"
           >
             {loading ? 'ЗАВАНТАЖЕННЯ...' : 'УВІЙТИ В ПАНЕЛЬ'}
           </button>
@@ -167,10 +207,11 @@ const AdminLogin = () => {
   );
 };
 
-const AdminPanel = ({ dishes }: { dishes: Dish[] }) => {
+const AdminPanel = ({ dishes, theme }: { dishes: Dish[], theme: Theme }) => {
   const [newDish, setNewDish] = useState({ name: '', description: '', price: '', category: 'Основні' });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const isDark = theme === 'dark';
 
   const handleAddDish = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,18 +252,22 @@ const AdminPanel = ({ dishes }: { dishes: Dish[] }) => {
     await updateDoc(doc(db, 'dishes', id), { isAvailable: !current });
   };
 
+  const inputClasses = `w-full border p-3 outline-none transition-colors ${
+    isDark ? 'bg-black border-white/10 text-white focus:border-[#39FF14]' : 'bg-white border-black/10 text-black focus:border-[#39FF14]'
+  }`;
+
   return (
-    <div className="pt-24 px-6 pb-20 max-w-7xl mx-auto">
+    <div className={`pt-24 px-6 pb-20 max-w-7xl mx-auto transition-colors duration-300`}>
       <div className="flex justify-between items-center mb-12">
         <h1 className="text-4xl font-black text-[#39FF14] tracking-tighter">КЕРУВАННЯ МЕНЮ</h1>
-        <button onClick={() => signOut(auth)} className="text-white/40 hover:text-white flex items-center gap-2">
-          <LogOut size={20} /> Вийти
+        <button onClick={() => signOut(auth)} className={`${isDark ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'} flex items-center gap-2 font-bold text-xs uppercase`}>
+          <LogOut size={16} /> Вийти
         </button>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-12">
         <div className="lg:col-span-1">
-          <div className="bg-[#1a1a1a] p-8 border border-white/10 sticky top-24">
+          <div className={`p-8 border sticky top-24 transition-colors duration-300 ${isDark ? 'bg-[#1a1a1a] border-white/10' : 'bg-white border-black/5 shadow-sm'}`}>
             <h2 className="text-xl font-black mb-6 flex items-center gap-2">
               <PlusCircle className="text-[#FF007F]" /> ДОДАТИ СТРАВУ
             </h2>
@@ -230,22 +275,22 @@ const AdminPanel = ({ dishes }: { dishes: Dish[] }) => {
               <input 
                 type="text" placeholder="Назва страви" required
                 value={newDish.name} onChange={e => setNewDish({...newDish, name: e.target.value})}
-                className="w-full bg-black border border-white/10 p-3 text-white outline-none focus:border-[#39FF14]"
+                className={inputClasses}
               />
               <textarea 
                 placeholder="Опис" required
                 value={newDish.description} onChange={e => setNewDish({...newDish, description: e.target.value})}
-                className="w-full bg-black border border-white/10 p-3 text-white outline-none focus:border-[#39FF14] h-24"
+                className={`${inputClasses} h-24`}
               />
               <div className="grid grid-cols-2 gap-4">
                 <input 
                   type="number" placeholder="Ціна (₴)" required
                   value={newDish.price} onChange={e => setNewDish({...newDish, price: e.target.value})}
-                  className="w-full bg-black border border-white/10 p-3 text-white outline-none focus:border-[#39FF14]"
+                  className={inputClasses}
                 />
                 <select 
                   value={newDish.category} onChange={e => setNewDish({...newDish, category: e.target.value as Category})}
-                  className="w-full bg-black border border-white/10 p-3 text-white outline-none focus:border-[#39FF14]"
+                  className={inputClasses}
                 >
                   <option value="Основні">Основні</option>
                   <option value="Закуски">Закуски</option>
@@ -254,15 +299,15 @@ const AdminPanel = ({ dishes }: { dishes: Dish[] }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] text-white/40 mb-1 uppercase font-bold">Фото страви</label>
+                <label className={`block text-[10px] mb-1 uppercase font-bold ${isDark ? 'text-white/40' : 'text-black/40'}`}>Фото страви</label>
                 <input 
                   type="file" accept="image/*" onChange={e => setImageFile(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-white/40 file:bg-[#FF007F] file:border-none file:text-white file:px-4 file:py-2 file:mr-4 file:cursor-pointer"
+                  className={`w-full text-xs file:bg-[#FF007F] file:border-none file:text-white file:px-4 file:py-2 file:mr-4 file:cursor-pointer ${isDark ? 'text-white/40' : 'text-black/40'}`}
                 />
               </div>
               <button 
                 type="submit" disabled={uploading}
-                className="w-full bg-[#39FF14] text-black font-black py-4 mt-4 hover:opacity-90 disabled:opacity-50"
+                className="w-full bg-[#39FF14] text-black font-black py-4 mt-4 hover:opacity-90 disabled:opacity-50 cyber-glow-green"
               >
                 {uploading ? 'ЗАВАНТАЖЕННЯ...' : 'ЗБЕРЕГТИ СТРАВУ'}
               </button>
@@ -271,22 +316,28 @@ const AdminPanel = ({ dishes }: { dishes: Dish[] }) => {
         </div>
 
         <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-xl font-black mb-6">АКТИВНЕ МЕНЮ ({dishes.length})</h2>
+          <h2 className="text-xl font-black mb-6 uppercase tracking-tighter">АКТИВНЕ МЕНЮ ({dishes.length})</h2>
           {dishes.map(dish => (
-            <div key={dish.id} className="bg-[#1a1a1a] border border-white/10 p-4 flex items-center gap-4 group">
+            <div key={dish.id} className={`border p-4 flex items-center gap-4 group transition-colors duration-300 ${
+              isDark ? 'bg-[#1a1a1a] border-white/10' : 'bg-white border-black/5 shadow-sm'
+            }`}>
               <img src={dish.imageURL} alt={dish.name} className="w-20 h-20 object-cover border border-white/10" />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold">{dish.name}</h3>
-                  <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-white/40">{dish.category}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded ${isDark ? 'bg-white/5 text-white/40' : 'bg-black/5 text-black/40'}`}>{dish.category}</span>
                 </div>
-                <p className="text-sm text-white/40 line-clamp-1">{dish.description}</p>
+                <p className={`text-sm line-clamp-1 ${isDark ? 'text-white/40' : 'text-black/40'}`}>{dish.description}</p>
                 <p className="text-[#39FF14] font-bold text-sm">{formatPrice(dish.price)}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => toggleAvailability(dish.id, dish.isAvailable)}
-                  className={`p-2 border ${dish.isAvailable ? 'border-[#39FF14] text-[#39FF14]' : 'border-white/10 text-white/20'} hover:bg-white/5 transition-colors`}
+                  className={`p-2 border transition-colors ${
+                    dish.isAvailable 
+                      ? 'border-[#39FF14] text-[#39FF14]' 
+                      : isDark ? 'border-white/10 text-white/20' : 'border-black/10 text-black/20'
+                  } hover:bg-white/5`}
                   title={dish.isAvailable ? "В наявності" : "Немає в наявності"}
                 >
                   {dish.isAvailable ? <Check size={18} /> : <X size={18} />}
@@ -310,15 +361,18 @@ const CartSidebar = ({
   cart, 
   setCart, 
   isOpen, 
-  setIsOpen 
+  setIsOpen,
+  theme
 }: { 
   cart: CartItem[], 
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>,
   isOpen: boolean,
-  setIsOpen: (open: boolean) => void
+  setIsOpen: (open: boolean) => void,
+  theme: Theme
 }) => {
   const [isCheckout, setIsCheckout] = useState(false);
   const [checkoutForm, setCheckoutForm] = useState({ name: '', phone: '', address: '' });
+  const isDark = theme === 'dark';
 
   const total = useMemo(() => cart.reduce((sum, item) => sum + (item.price * item.quantity), 0), [cart]);
 
@@ -359,59 +413,67 @@ const CartSidebar = ({
         initial={{ x: '100%' }}
         animate={{ x: isOpen ? 0 : '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-[#121212] border-l border-white/10 z-[70] flex flex-col"
+        className={`fixed top-0 right-0 bottom-0 w-full max-w-md border-l z-[70] flex flex-col transition-colors duration-300 ${
+          isDark ? 'bg-[#121212] border-white/10' : 'bg-white border-black/10'
+        }`}
       >
-        <div className="p-6 border-b border-white/10 flex justify-between items-center">
+        <div className={`p-6 border-b flex justify-between items-center ${isDark ? 'border-white/10' : 'border-black/5'}`}>
           <h2 className="text-2xl font-black text-[#39FF14] tracking-tighter uppercase">КОШИК</h2>
-          <button onClick={() => setIsOpen(false)} className="p-2 text-white/40 hover:text-white">
+          <button onClick={() => setIsOpen(false)} className={`p-2 transition-colors ${isDark ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'}`}>
             <X size={24} />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {cart.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center opacity-20">
+            <div className={`h-full flex flex-col items-center justify-center opacity-20 ${isDark ? 'text-white' : 'text-black'}`}>
               <ShoppingBag size={80} />
               <p className="mt-4 font-bold">Кошик порожній</p>
             </div>
           ) : isCheckout ? (
             <form onSubmit={handleCheckout} className="space-y-6">
-              <h3 className="text-[#FF007F] font-black text-xl mb-4">ОФОРМЛЕННЯ</h3>
+              <h3 className="text-[#FF007F] font-black text-xl mb-4 uppercase">ОФОРМЛЕННЯ</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-[10px] text-white/40 uppercase mb-1">Ім'я</label>
+                  <label className={`block text-[10px] uppercase mb-1 font-bold ${isDark ? 'text-white/40' : 'text-black/40'}`}>Ім'я</label>
                   <input 
                     type="text" required
-                    className="w-full bg-black border border-white/10 p-3 text-white outline-none focus:border-[#39FF14]"
+                    className={`w-full border p-3 outline-none transition-colors ${
+                      isDark ? 'bg-black border-white/10 text-white focus:border-[#39FF14]' : 'bg-slate-50 border-black/10 text-black focus:border-[#39FF14]'
+                    }`}
                     value={checkoutForm.name} onChange={e => setCheckoutForm({...checkoutForm, name: e.target.value})}
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] text-white/40 uppercase mb-1">Телефон</label>
+                  <label className={`block text-[10px] uppercase mb-1 font-bold ${isDark ? 'text-white/40' : 'text-black/40'}`}>Телефон</label>
                   <input 
                     type="tel" required placeholder="+380..."
-                    className="w-full bg-black border border-white/10 p-3 text-white outline-none focus:border-[#39FF14]"
+                    className={`w-full border p-3 outline-none transition-colors ${
+                      isDark ? 'bg-black border-white/10 text-white focus:border-[#39FF14]' : 'bg-slate-50 border-black/10 text-black focus:border-[#39FF14]'
+                    }`}
                     value={checkoutForm.phone} onChange={e => setCheckoutForm({...checkoutForm, phone: e.target.value})}
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] text-white/40 uppercase mb-1">Адреса доставки</label>
+                  <label className={`block text-[10px] uppercase mb-1 font-bold ${isDark ? 'text-white/40' : 'text-black/40'}`}>Адреса доставки</label>
                   <textarea 
                     required
-                    className="w-full bg-black border border-white/10 p-3 text-white outline-none focus:border-[#39FF14] h-24"
+                    className={`w-full border p-3 outline-none transition-colors h-24 ${
+                      isDark ? 'bg-black border-white/10 text-white focus:border-[#39FF14]' : 'bg-slate-50 border-black/10 text-black focus:border-[#39FF14]'
+                    }`}
                     value={checkoutForm.address} onChange={e => setCheckoutForm({...checkoutForm, address: e.target.value})}
                   />
                 </div>
               </div>
-              <div className="pt-6 border-t border-white/10">
+              <div className={`pt-6 border-t ${isDark ? 'border-white/10' : 'border-black/5'}`}>
                 <div className="flex justify-between mb-4">
-                  <span className="text-white/60">До сплати:</span>
+                  <span className={isDark ? 'text-white/60' : 'text-black/60'}>До сплати:</span>
                   <span className="text-[#39FF14] font-black text-xl">{formatPrice(total)}</span>
                 </div>
                 <button type="submit" className="w-full bg-[#39FF14] text-black font-black py-4 cyber-glow-green">
                   ПІДТВЕРДИТИ ЗАМОВЛЕННЯ
                 </button>
-                <button type="button" onClick={() => setIsCheckout(false)} className="w-full text-white/40 py-4 text-xs font-bold uppercase mt-2">
+                <button type="button" onClick={() => setIsCheckout(false)} className={`w-full py-4 text-[10px] font-bold uppercase mt-2 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
                   Повернутись до кошика
                 </button>
               </div>
@@ -421,15 +483,15 @@ const CartSidebar = ({
               <div key={item.id} className="flex gap-4 group">
                 <img src={item.imageURL} alt={item.name} className="w-20 h-20 object-cover border border-white/10" />
                 <div className="flex-1">
-                  <h3 className="font-bold text-sm">{item.name}</h3>
+                  <h3 className={`font-bold text-sm ${isDark ? 'text-white' : 'text-black'}`}>{item.name}</h3>
                   <p className="text-[#39FF14] font-bold text-xs">{formatPrice(item.price)}</p>
                   <div className="flex items-center gap-3 mt-2">
-                    <button onClick={() => updateQty(item.id, -1)} className="w-6 h-6 border border-white/10 flex items-center justify-center hover:border-[#FF007F] text-xs">-</button>
-                    <span className="text-sm font-bold">{item.quantity}</span>
-                    <button onClick={() => updateQty(item.id, 1)} className="w-6 h-6 border border-white/10 flex items-center justify-center hover:border-[#39FF14] text-xs">+</button>
+                    <button onClick={() => updateQty(item.id, -1)} className={`w-6 h-6 border flex items-center justify-center hover:border-[#FF007F] text-xs ${isDark ? 'border-white/10 text-white' : 'border-black/10 text-black'}`}>-</button>
+                    <span className={`text-sm font-bold ${isDark ? 'text-white' : 'text-black'}`}>{item.quantity}</span>
+                    <button onClick={() => updateQty(item.id, 1)} className={`w-6 h-6 border flex items-center justify-center hover:border-[#39FF14] text-xs ${isDark ? 'border-white/10 text-white' : 'border-black/10 text-black'}`}>+</button>
                   </div>
                 </div>
-                <button onClick={() => removeItem(item.id)} className="text-white/20 hover:text-[#FF007F] transition-colors p-2">
+                <button onClick={() => removeItem(item.id)} className={`transition-colors p-2 ${isDark ? 'text-white/20 hover:text-[#FF007F]' : 'text-black/20 hover:text-[#FF007F]'}`}>
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -438,9 +500,9 @@ const CartSidebar = ({
         </div>
 
         {cart.length > 0 && !isCheckout && (
-          <div className="p-6 border-t border-white/10 bg-black/20">
+          <div className={`p-6 border-t ${isDark ? 'border-white/10 bg-black/20' : 'border-black/5 bg-slate-50'}`}>
             <div className="flex justify-between items-center mb-6">
-              <span className="text-white/60 font-medium">Разом:</span>
+              <span className={isDark ? 'text-white/60 font-medium' : 'text-black/60 font-medium'}>Разом:</span>
               <span className="text-[#39FF14] text-2xl font-black">{formatPrice(total)}</span>
             </div>
             <button 
@@ -456,16 +518,17 @@ const CartSidebar = ({
   );
 };
 
-const MenuGrid = ({ dishes, addToCart }: { dishes: Dish[], addToCart: (dish: Dish) => void }) => {
+const MenuGrid = ({ dishes, addToCart, theme }: { dishes: Dish[], addToCart: (dish: Dish) => void, theme: Theme }) => {
   const [activeCategory, setActiveCategory] = useState<string>('Усі');
   const categories = ['Усі', 'Основні', 'Закуски', 'Напої', 'Десерти'];
+  const isDark = theme === 'dark';
 
   const filtered = dishes.filter(d => (activeCategory === 'Усі' || d.category === activeCategory) && d.isAvailable);
 
   return (
     <section className="py-20 px-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
-        <h2 className="text-4xl font-black tracking-tighter">
+        <h2 className="text-4xl font-black tracking-tighter uppercase">
           НАШЕ <span className="text-[#FF007F]">МЕНЮ</span>
         </h2>
         <div className="flex gap-2 overflow-x-auto pb-2 w-full md:w-auto">
@@ -473,8 +536,10 @@ const MenuGrid = ({ dishes, addToCart }: { dishes: Dish[], addToCart: (dish: Dis
             <button 
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`px-6 py-2 border text-xs font-bold uppercase transition-all whitespace-nowrap ${
-                activeCategory === cat ? 'bg-[#39FF14] text-black border-[#39FF14] cyber-glow-green' : 'border-white/10 text-white/40 hover:border-white/40'
+              className={`px-6 py-2 border text-[10px] font-black uppercase transition-all whitespace-nowrap ${
+                activeCategory === cat 
+                  ? 'bg-[#39FF14] text-black border-[#39FF14] cyber-glow-green' 
+                  : isDark ? 'border-white/10 text-white/40 hover:border-white/40' : 'border-black/10 text-black/40 hover:border-black/40'
               }`}
             >
               {cat}
@@ -488,7 +553,9 @@ const MenuGrid = ({ dishes, addToCart }: { dishes: Dish[], addToCart: (dish: Dis
           <motion.div 
             layout
             key={dish.id} 
-            className="group bg-[#1a1a1a] border border-white/5 hover:border-[#39FF14]/50 transition-all duration-300"
+            className={`border transition-all duration-300 ${
+              isDark ? 'bg-[#1a1a1a] border-white/5 hover:border-[#39FF14]/50' : 'bg-white border-black/5 hover:border-[#39FF14]/50 shadow-sm'
+            }`}
           >
             <div className="relative aspect-[4/3] overflow-hidden">
               <img 
@@ -501,11 +568,11 @@ const MenuGrid = ({ dishes, addToCart }: { dishes: Dish[], addToCart: (dish: Dis
               </div>
             </div>
             <div className="p-6">
-              <h3 className="text-xl font-bold mb-2 group-hover:text-[#39FF14] transition-colors">{dish.name}</h3>
-              <p className="text-white/40 text-sm mb-6 line-clamp-2 h-10">{dish.description}</p>
+              <h3 className={`text-xl font-bold mb-2 transition-colors ${isDark ? 'text-white' : 'text-black'}`}>{dish.name}</h3>
+              <p className={`text-sm mb-6 line-clamp-2 h-10 ${isDark ? 'text-white/40' : 'text-black/40'}`}>{dish.description}</p>
               <button 
                 onClick={() => addToCart(dish)}
-                className="w-full border-2 border-[#39FF14] text-[#39FF14] py-3 font-black text-sm uppercase flex items-center justify-center gap-2 group-hover:bg-[#39FF14] group-hover:text-black transition-all"
+                className="w-full border-2 border-[#39FF14] text-[#39FF14] py-3 font-black text-sm uppercase flex items-center justify-center gap-2 hover:bg-[#39FF14] hover:text-black transition-all"
               >
                 <Plus size={18} /> До кошика
               </button>
@@ -517,33 +584,36 @@ const MenuGrid = ({ dishes, addToCart }: { dishes: Dish[], addToCart: (dish: Dis
   );
 };
 
-const InfoSection = () => (
-  <section className="py-20 bg-black/40 border-y border-white/5 px-6">
-    <div className="max-w-7xl mx-auto grid md:grid-cols-3 gap-12">
-      <div className="flex flex-col items-center text-center">
-        <div className="w-16 h-16 bg-[#39FF14]/10 rounded-full flex items-center justify-center text-[#39FF14] mb-6">
-          <Clock size={32} />
+const InfoSection = ({ theme }: { theme: Theme }) => {
+  const isDark = theme === 'dark';
+  return (
+    <section className={`py-20 border-y px-6 transition-colors duration-300 ${isDark ? 'bg-black/40 border-white/5' : 'bg-slate-50 border-black/5'}`}>
+      <div className="max-w-7xl mx-auto grid md:grid-cols-3 gap-12">
+        <div className="flex flex-col items-center text-center">
+          <div className="w-16 h-16 bg-[#39FF14]/10 rounded-full flex items-center justify-center text-[#39FF14] mb-6">
+            <Clock size={32} />
+          </div>
+          <h4 className={`font-black text-lg mb-2 ${isDark ? 'text-white' : 'text-black'}`}>ШВИДКО</h4>
+          <p className={`text-sm italic ${isDark ? 'text-white/40' : 'text-black/40'}`}>Доставка до 45 хвилин у будь-яку точку міста</p>
         </div>
-        <h4 className="font-black text-lg mb-2">ШВИДКО</h4>
-        <p className="text-white/40 text-sm italic">Доставка до 45 хвилин у будь-яку точку міста</p>
-      </div>
-      <div className="flex flex-col items-center text-center">
-        <div className="w-16 h-16 bg-[#FF007F]/10 rounded-full flex items-center justify-center text-[#FF007F] mb-6">
-          <MapPin size={32} />
+        <div className="flex flex-col items-center text-center">
+          <div className="w-16 h-16 bg-[#FF007F]/10 rounded-full flex items-center justify-center text-[#FF007F] mb-6">
+            <MapPin size={32} />
+          </div>
+          <h4 className={`font-black text-lg mb-2 ${isDark ? 'text-white' : 'text-black'}`}>ЛОКАЛЬНО</h4>
+          <p className={`text-sm italic ${isDark ? 'text-white/40' : 'text-black/40'}`}>Використовуємо лише фермерські продукти України</p>
         </div>
-        <h4 className="font-black text-lg mb-2">ЛОКАЛЬНО</h4>
-        <p className="text-white/40 text-sm italic">Використовуємо лише фермерські продукти України</p>
-      </div>
-      <div className="flex flex-col items-center text-center">
-        <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500 mb-6">
-          <Phone size={32} />
+        <div className="flex flex-col items-center text-center">
+          <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500 mb-6">
+            <Phone size={32} />
+          </div>
+          <h4 className={`font-black text-lg mb-2 ${isDark ? 'text-white' : 'text-black'}`}>ПІДТРИМКА</h4>
+          <p className={`text-sm italic ${isDark ? 'text-white/40' : 'text-black/40'}`}>Цілодобовий зв'язок з нашими кібер-кур'єрами</p>
         </div>
-        <h4 className="font-black text-lg mb-2">ПІДТРИМКА</h4>
-        <p className="text-white/40 text-sm italic">Цілодобовий зв'язок з нашими кібер-кур'єрами</p>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 // --- Main App ---
 
@@ -552,6 +622,9 @@ export default function App() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [theme, setTheme] = useState<Theme>(() => {
+    return (localStorage.getItem('theme') as Theme) || 'dark';
+  });
 
   useEffect(() => {
     // Sync Auth State
@@ -570,6 +643,14 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    document.body.style.backgroundColor = theme === 'dark' ? '#121212' : '#F8FAFC';
+    document.body.style.color = theme === 'dark' ? '#ffffff' : '#0F172A';
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+
   const addToCart = (dish: Dish) => {
     setCart(prev => {
       const existing = prev.find(item => item.id === dish.id);
@@ -585,24 +666,28 @@ export default function App() {
 
   return (
     <Router>
-      <div className="min-h-screen">
-        <Navbar cartCount={totalCartItems} user={user} />
+      <div className={`min-h-screen transition-colors duration-300 ${theme === 'dark' ? 'dark' : ''}`}>
+        <Navbar cartCount={totalCartItems} user={user} theme={theme} toggleTheme={toggleTheme} />
         
         <Routes>
           <Route path="/" element={
             <main>
-              <Hero />
-              <MenuGrid dishes={dishes} addToCart={addToCart} />
-              <InfoSection />
-              <footer className="py-20 px-6 border-t border-white/10 text-center">
+              <Hero theme={theme} />
+              <MenuGrid dishes={dishes} addToCart={addToCart} theme={theme} />
+              <InfoSection theme={theme} />
+              <footer className={`py-20 px-6 border-t text-center transition-colors duration-300 ${
+                theme === 'dark' ? 'border-white/10' : 'border-black/5'
+              }`}>
                 <div className="text-[#39FF14] font-black text-4xl tracking-tighter mb-4 italic">HOME KITCHEN</div>
-                <p className="text-white/20 text-xs tracking-widest uppercase">© 2025 Домашня Кухня. Made for Cyber-Ukraine.</p>
+                <p className={`text-xs tracking-widest uppercase ${theme === 'dark' ? 'text-white/20' : 'text-black/20'}`}>
+                  © 2025 Домашня Кухня. Made for Cyber-Ukraine.
+                </p>
               </footer>
             </main>
           } />
           
           <Route path="/admin" element={
-            user ? <AdminPanel dishes={dishes} /> : <AdminLogin />
+            user ? <AdminPanel dishes={dishes} theme={theme} /> : <AdminLogin theme={theme} />
           } />
 
           <Route path="*" element={<Navigate to="/" />} />
@@ -613,6 +698,7 @@ export default function App() {
           setCart={setCart} 
           isOpen={isCartOpen} 
           setIsOpen={setIsCartOpen} 
+          theme={theme}
         />
         
         {/* Floating Cart Button for Mobile */}
